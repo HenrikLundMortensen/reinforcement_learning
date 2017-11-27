@@ -21,9 +21,9 @@ class Maze():
         self.state = np.array(self.start_state)
         self.target = np.array([self._width-2,0])
         self.memory = []
-        self.border_penalty = -5
-        self.step_penalty = -0.1
-        self.target_reward = 5
+        self.border_penalty = -0.2
+        self.step_penalty = -0.003
+        self.target_reward = 2
         self.score = 0
 
 
@@ -38,7 +38,7 @@ class Maze():
         w = self._width
 
         self.border = []
-        self.maze_grid = np.zeros(shape=(h,w),dtype=object)
+        self.maze_grid = np.zeros(shape=(w,h),dtype=object)
         for y in range(h):
             for x in range(w):
                 self.maze_grid[x,y] = [x,y]

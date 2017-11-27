@@ -7,9 +7,9 @@ from maze import *
 
 n_hidden = 30
 n_episodes = 2000
-e = 0.1
-gamma= 0.99
-lr = 0.001
+e = 0.01
+gamma= 0.1
+lr = 0.0001
 
 maze = Maze(height=10,width=10)
 
@@ -17,6 +17,7 @@ maze = Maze(height=10,width=10)
 
 fig = plt.figure()
 ax = fig.gca()
+ax.axis('equal')
 maze.draw_maze(ax)
 fig.savefig('fig_maze')
 
@@ -31,20 +32,21 @@ pos = tf.placeholder(shape=[1,2],dtype=tf.float32)
 layer = tf.contrib.layers.fully_connected(inputs=pos,
                                           num_outputs=n_hidden,
                                           weights_initializer=tf.random_normal_initializer)
-layer = tf.contrib.layers.fully_connected(inputs=layer,num_outputs=n_hidden)
-layer = tf.contrib.layers.fully_connected(inputs=layer,num_outputs=n_hidden)
-Qout = tf.contrib.layers.fully_connected(inputs=layer,
-                                         num_outputs=4,
-                                         activation_fn=None,
-                                         weights_initializer=tf.random_normal_initializer)
-predict = tf.argmax(Qout,axis=1)
+# layer = tf.contrib.layers.fully_connected(inputs=layer,num_outputs=n_hidden)
+# layer = tf.contrib.layers.fully_connected(inputs=layer,num_outputs=n_hidden)
+layer = tf.contrib.layers.fully_connected(inputs=layer,
+                                          num_outputs=4,
+                                          activation_fn=None,
+                                          weights_initializer=tf.random_normal_initializer)
 
+Qout = layer
+
+predict = tf.argmax(Qout,axis=1)
 
 nextQ = tf.placeholder(shape=[1,4],dtype=tf.float32)
 loss = tf.reduce_sum(tf.square(nextQ-Qout))
 trainer = tf.train.GradientDescentOptimizer(learning_rate=lr)
 trainOp = trainer.minimize(loss)
-
 init = tf.initialize_all_variables()
 
 
@@ -114,18 +116,17 @@ with tf.Session() as sess:
             # Find next action for current state
             action,allQ = sess.run([predict,Qout],feed_dict={pos: xy})
 
-
-            if np.mod(i,100)!=0:
-                # With probability e, take a random action
-                if np.random.rand(1) < e:
-                    action = np.random.randint(4)
+            # if np.mod(i,100)!=0:
+            #     # With probability e, take a random action
+            if np.random.rand(1) < e:
+                print('Random!')
+                action = np.random.randint(4)
             
             # Perform step
             maze.take_action(action)
             
-
             # Get new position
-            new_xy = maze.state.reshape(1,2)/10
+            new_xy = maze.state.copy().reshape(1,2)/10
             
             # Get reward
             r,t = maze.get_positional_reward()
@@ -135,7 +136,7 @@ with tf.Session() as sess:
 
             # Give reward for going right
             if action == 2:
-                reward += 0.0
+                reward += 0.05
 
             reward += r
             
@@ -144,29 +145,31 @@ with tf.Session() as sess:
             Qtarget = allQ.copy()
 
             if not t:
-                Qtarget[0,action] = reward + gamma*np.max(Qnew)
+                Qtarget[0,action] += reward + gamma*np.max(Qnew)
             else:
-                Qtarget[0,action] = reward
+                Qtarget[0,action] += reward
 
-            _,loss_value =sess.run([trainOp,loss],feed_dict={pos: new_xy,nextQ:Qtarget})
+            m=0
+            while m<1:
+                _,loss_value =sess.run([trainOp,loss],feed_dict={pos: xy,nextQ:Qtarget})
+                m += 1
             
-            xy = new_xy
+            xy = new_xy.copy()
 
             if np.mod(i,500)==0:
                 print('reward = %4.4f' %(reward))
                 maze.draw_maze(ax)
                 plt.pause(0.01)
+                embed()
 
             # If termination is True, break
             if t:
                 jlist.append(j)
                 rlist.append(reward)
                 break
-                
+    
             j +=1
             
-        
-        
 rlist = np.array(rlist)
 jlist = np.array(jlist)
 
