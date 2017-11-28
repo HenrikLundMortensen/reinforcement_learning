@@ -20,11 +20,11 @@ class Maze():
 
         self.state = np.array(self.start_state)
         # self.target = np.array([self._width-2,self._height-2]) 
-        self.target = np.array([self._width-2,2])       
+        self.target = np.array([self._width-2,1])       
         self.memory = []
-        self.border_penalty = -40
-        self.step_penalty = -1
-        self.target_reward = 100
+        self.border_penalty = -10
+        self.step_penalty = -0.5
+        self.target_reward = 1000
         self.score = 0
 
 
@@ -50,8 +50,17 @@ class Maze():
                 if y == 0 and x > 0 and x < w:
                     self.border.append([x,y])
 
-                if y == 1 and x == int(self._width/2):
+                if y == 1 and x == 5:
                     self.border.append([x,y])
+
+                if y == 2 and x == 5:
+                    self.border.append([x,y])
+
+                if y == 1 and x == 5:
+                    self.border.append([x,y])
+
+                if y == 2 and x == 5:
+                    self.border.append([x,y])                                        
 
 
     def restart(self):
