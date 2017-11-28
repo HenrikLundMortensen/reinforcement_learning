@@ -20,11 +20,11 @@ class Maze():
 
         self.state = np.array(self.start_state)
         # self.target = np.array([self._width-2,self._height-2]) 
-        self.target = np.array([self._width-2,1])       
+        self.target = np.array([self._width-2,2])       
         self.memory = []
-        self.border_penalty = -5
-        self.step_penalty = -0.1
-        self.target_reward = 5
+        self.border_penalty = -40
+        self.step_penalty = -1
+        self.target_reward = 100
         self.score = 0
 
 
