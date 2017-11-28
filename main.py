@@ -12,7 +12,7 @@ gamma= 0.99
 lr = 0.000001
 
 
-width=10
+width=15
 height = 5
 
 maze = Maze(height=height,
@@ -149,7 +149,7 @@ for i in range(n_episodes):
         xy_list = xy_memory.reshape(xy_memory.shape[0],xy_memory.shape[2],1,1)
         Qtarget_list = qtarget_memory.reshape(qtarget_memory.shape[0],qtarget_memory.shape[1]*qtarget_memory.shape[2])
         m=0
-        while m<400:
+        while m<50:
             _,loss_value =sess.run([trainOp,loss],feed_dict={pos: xy_list,
                                                              nextQ:Qtarget_list})
             m += 1
@@ -261,5 +261,5 @@ for i in range(n_episodes):
 rlist = np.array(rlist)
 jlist = np.array(jlist)
 
-sess.close()
+# sess.close()
 
