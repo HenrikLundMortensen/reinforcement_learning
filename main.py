@@ -12,7 +12,7 @@ gamma= 0.99
 lr = 0.000001
 
 
-width=15
+width=10
 height = 5
 
 maze = Maze(height=height,
@@ -28,32 +28,32 @@ fig.savefig('fig_maze')
 
 
 # Neural Network
-pos = tf.placeholder(shape=[None,width+height],dtype=tf.float32)
+pos = tf.placeholder(shape=[None,2,1,1],dtype=tf.float32)
 
 # layer = tf.contrib.layers.fully_connected(inputs=pos,
 #                                           num_outputs=30)
-# conv_layer = tf.contrib.layers.conv2d(inputs=pos,
-#                                       kernel_size=1,
-#                                       num_outputs=20,
-#                                       activation_fn=tf.sigmoid,
-#                                       weights_initializer=tf.random_normal_initializer)
+conv_layer = tf.contrib.layers.conv2d(inputs=pos,
+                                      kernel_size=1,
+                                      num_outputs=50,
+                                      activation_fn=tf.sigmoid,
+                                      weights_initializer=tf.random_normal_initializer)
 
 # conv_layer = tf.contrib.layers.conv2d(inputs=conv_layer,
 #                                       kernel_size=2,
 #                                       num_outputs=20,
 #                                       activation_fn=tf.sigmoid,
 #                                       weights_initializer=tf.random_normal_initializer)
-# conv_layer = tf.contrib.layers.conv2d(inputs=conv_layer,
-#                                       kernel_size=2,
-#                                       num_outputs=50,
-#                                       activation_fn=None,                                      
-#                                       weights_initializer=tf.random_normal_initializer)
+conv_layer = tf.contrib.layers.conv2d(inputs=conv_layer,
+                                      kernel_size=2,
+                                      num_outputs=5,
+                                      activation_fn=None,                                      
+                                      weights_initializer=tf.random_normal_initializer)
 
 
 # conv_layer = tf.contrib.layers.conv2d(inputs=conv_layer,
 #                                       kernel_size=40,
 #                                       num_outputs=n_hidden)
-layer = tf.contrib.layers.fully_connected(inputs=pos,
+layer = tf.contrib.layers.fully_connected(inputs=tf.reshape(conv_layer,shape=np.array([-1,2*5])),
                                           num_outputs=n_hidden)
                                           # weights_initializer=tf.random_normal_initializer)
 layer = tf.contrib.layers.fully_connected(inputs=layer,
@@ -146,7 +146,7 @@ for i in range(n_episodes):
         xy_memory = np.array(xy_memory)
         qtarget_memory = np.array(qtarget_memory)
         
-        xy_list = xy_memory.reshape(xy_memory.shape[0],xy_memory.shape[1]*xy_memory.shape[2])
+        xy_list = xy_memory.reshape(xy_memory.shape[0],xy_memory.shape[2],1,1)
         Qtarget_list = qtarget_memory.reshape(qtarget_memory.shape[0],qtarget_memory.shape[1]*qtarget_memory.shape[2])
         m=0
         while m<400:
@@ -158,9 +158,9 @@ for i in range(n_episodes):
         qtarget_memory = []
 
     xy = maze.state.copy().reshape(1,2)
-    xy_one_hot = np.zeros(shape=(1,height+width))
-    xy_one_hot[0][xy[0][0]] = 1
-    xy_one_hot[0][xy[0][1]+width] = 1
+    # xy_one_hot = np.zeros(shape=(1,height+width))
+    # xy_one_hot[0][xy[0][0]] = 1
+    # xy_one_hot[0][xy[0][1]+width] = 1
 
 
     reward = 0
@@ -171,7 +171,8 @@ for i in range(n_episodes):
     while j<99:
 
         # Find next action for current state
-        action,allQ,prob_dist = sess.run([predict,Qout,probs],feed_dict={pos: xy_one_hot})
+        # action,allQ,prob_dist = sess.run([predict,Qout,probs],feed_dict={pos: xy})
+        action,allQ,prob_dist = sess.run([predict,Qout,probs],feed_dict={pos: xy.reshape(1,2,1,1)})        
 
 
 
@@ -191,9 +192,9 @@ for i in range(n_episodes):
 
         # Get new position
         new_xy = maze.state.copy().reshape(1,2)# *[1/width,1/height]
-        new_xy_one_hot = np.zeros(shape=(1,height+width))
-        new_xy_one_hot[0][new_xy[0][0]] = 1
-        new_xy_one_hot[0][new_xy[0][1]+width] = 1
+        # new_xy_one_hot = np.zeros(shape=(1,height+width))
+        # new_xy_one_hot[0][new_xy[0][0]] = 1
+        # new_xy_one_hot[0][new_xy[0][1]+width] = 1
 
 
 
@@ -214,7 +215,8 @@ for i in range(n_episodes):
         reward += r
 
         # Get Q for new position
-        Qnew = sess.run(Qout,feed_dict={pos: new_xy_one_hot})
+        # Qnew = sess.run(Qout,feed_dict={pos: new_xy})
+        Qnew = sess.run(Qout,feed_dict={pos: new_xy.reshape(1,2,1,1)})        
         Qtarget = allQ.copy()
 
         if not t:
@@ -224,7 +226,7 @@ for i in range(n_episodes):
 
         # _,loss_value =sess.run([trainOp,loss],feed_dict={pos: xy_one_hot.reshape(1,width*height),nextQ:Qtarget})
             
-        xy_memory.append(xy_one_hot)
+        xy_memory.append(xy)
         qtarget_memory.append(Qtarget)
 
         xy = new_xy.copy()

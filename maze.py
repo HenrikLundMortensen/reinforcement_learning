@@ -53,14 +53,14 @@ class Maze():
                 if y == 1 and x == 5:
                     self.border.append([x,y])
 
-                if y == 2 and x == 5:
-                    self.border.append([x,y])
+                # if y == 2 and x == 5:
+                #     self.border.append([x,y])
 
-                if y == 1 and x == 5:
-                    self.border.append([x,y])
+                # if y == 1 and x == 5:
+                #     self.border.append([x,y])
 
-                if y == 2 and x == 5:
-                    self.border.append([x,y])                                        
+                # if y == 2 and x == 5:
+                #     self.border.append([x,y])                                        
 
 
     def restart(self):
