@@ -5,11 +5,11 @@ from IPython import embed
 from maze import *
 
 
-n_hidden = 200
+n_hidden = 100
 n_episodes = 5000
 e0 = 0.1
 gamma= 0.99
-lr = 0.1
+lr = 0.001
 
 
 width=10
@@ -17,8 +17,6 @@ height = 5
 
 maze = Maze(height=height,
             width=width)
-
-
 
 fig = plt.figure()
 ax = fig.gca()
@@ -30,14 +28,25 @@ fig.savefig('fig_maze')
 
 
 # Neural Network
-pos = tf.placeholder(shape=[None,2],dtype=tf.float32)
+pos = tf.placeholder(shape=[None,2,1,1],dtype=tf.float32)
 
-# W = tf.Variable(tf.random_uniform([2,100],0,0.01))
-# Qout = tf.matmul(inputs1,W)
-layer = tf.contrib.layers.fully_connected(inputs=pos,
+# layer = tf.contrib.layers.fully_connected(inputs=pos,
+#                                           num_outputs=30)
+conv_layer = tf.contrib.layers.conv2d(inputs=pos,
+                                      kernel_size=1,
+                                      num_outputs=n_hidden)
+conv_layer = tf.contrib.layers.conv2d(inputs=conv_layer,
+                                      kernel_size=1,
+                                      num_outputs=1)
+
+
+# conv_layer = tf.contrib.layers.conv2d(inputs=conv_layer,
+#                                       kernel_size=40,
+#                                       num_outputs=n_hidden)
+layer = tf.contrib.layers.fully_connected(inputs=tf.reshape(conv_layer,shape=np.array([-1,2])),
                                           num_outputs=n_hidden)
                                           # weights_initializer=tf.random_normal_initializer)
-# layer = tf.contrib.layers.fully_connected(inputs=layer,num_outputs=n_hidden)
+layer = tf.contrib.layers.fully_connected(inputs=layer,num_outputs=n_hidden)
 layer = tf.contrib.layers.fully_connected(inputs=layer,
                                           num_outputs=4,
                                           activation_fn=None)
@@ -116,6 +125,7 @@ with tf.Session() as sess:
         qtarget_memory = []
 
         xy = maze.state.copy().reshape(1,2)*[1/width,1/height]
+        xy = np.array([xy[0][0],xy[0][1]]).reshape(1,2,1,1)
 
         reward = 0
         j = 0
@@ -126,24 +136,23 @@ with tf.Session() as sess:
             action,allQ = sess.run([predict,Qout],feed_dict={pos: xy})
 
 
-
-
+            
+            
             # e = (e0-1)/n_episodes * i+1
             
-            # if np.mod(i,500)!=0:
-            action = np.random.choice(range(4),p=allQ[0])
+            if np.mod(i,inspect_freq)!=0:
+                action = np.random.choice(range(4),p=allQ[0])
             # #     # With probability e, take a random action
             #     if np.random.rand(1) < e:
             #         # print('Random!')
             #         action = np.random.randint(4)
-            
-
             
             # Perform step
             maze.take_action(action)
             
             # Get new position
             new_xy = maze.state.copy().reshape(1,2)*[1/width,1/height]
+            new_xy = np.array([new_xy[0][0],new_xy[0][1]]).reshape(1,2,1,1)
             
             # Get reward
             r,t = maze.get_positional_reward()
@@ -174,9 +183,8 @@ with tf.Session() as sess:
             if np.mod(i,inspect_freq)==0:
                 print('reward = %4.4f' %(reward))
                 maze.draw_maze(ax)
-                plt.pause(0.01)
-                print(xy)
-                embed()
+                plt.pause(0.001)
+                input('Press enter to continue...')
 
             # If termination is True, break
             if t:
@@ -187,12 +195,12 @@ with tf.Session() as sess:
             
             j +=1
 
-        xy_list = np.array(xy_memory).reshape((len(xy_memory),2))
+        xy_list = np.array(xy_memory).reshape((len(xy_memory),2)).reshape((len(xy_memory),2,1,1))
         Qtarget_list = np.array(qtarget_memory).reshape((len(qtarget_memory),4))
         m=0
-        while m<100:
+        while m<50:
             _,loss_value =sess.run([trainOp,loss],feed_dict={pos: xy_list,nextQ:Qtarget_list})
-            m += 1            
+            m += 1
             
 rlist = np.array(rlist)
 jlist = np.array(jlist)

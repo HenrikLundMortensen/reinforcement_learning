@@ -22,9 +22,9 @@ class Maze():
         # self.target = np.array([self._width-2,self._height-2]) 
         self.target = np.array([self._width-2,1])       
         self.memory = []
-        self.border_penalty = -0.5
-        self.step_penalty = -0.02
-        self.target_reward = 1
+        self.border_penalty = -5
+        self.step_penalty = -0.1
+        self.target_reward = 5
         self.score = 0
 
 
