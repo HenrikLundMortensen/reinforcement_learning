@@ -5,15 +5,15 @@ from IPython import embed
 from maze import *
 
 
-n_hidden = 100
+n_hidden = 20
 n_episodes = 10000
-e0 = 0.2
+e0 = 0.1
 gamma= 0.99
-lr = 0.000001
+# lr = 0.000001
 
 
 width=15
-height = 5
+height = 4
 
 maze = Maze(height=height,
             width=width)
@@ -180,7 +180,8 @@ for i in range(n_episodes):
         action = np.random.choice(range(4),p=prob_dist[0])
         # #     # With probability e, take a random action
 
-        e = (-e0)/n_episodes * i+e0        
+        # e = (-e0)/n_episodes * i+e0
+        e = e0
         if np.mod(i,inspect_freq)!=0:        
             if np.random.rand(1) < e:
                 # print('Random!')
