@@ -16,7 +16,7 @@ ylist1 = np.array([1,1,1,1])
 X1 = np.zeros(2*N)
 for i in range(N):
     X1[2*i] = xlist1[i]
-    X1[2*i+1] = ylist1[i]    
+    X1[2*i+1] = ylist1[i]
     
 
 fpf = fingerprintFeature()
