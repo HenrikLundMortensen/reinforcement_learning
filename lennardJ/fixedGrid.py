@@ -16,10 +16,30 @@ def softmax(x):
     """
     res = np.exp(x)
     return res/np.sum(res)
+
+
+def get_all_points_not_in_gridlist(all_points,gridlist):
+    """
+    
+    Arguments:
+    - `all_points`:
+    - `gridlist`:
+    """
+    slist = []
+    candidate_feature_list = []
+    for s,candidate in enumerate(all_points):
+        if candidate.tolist() not in gridlist.tolist():
+            candidate_gridlist = np.vstack((gridlist,np.array(candidate)))
+            candidate_feature_list.append(LJEnv.getFeature(candidate_gridlist))
+            slist.append(s)
+        s += 1
+
+    return slist,np.array(candidate_feature_list)
+
     
 
 N_atoms = 7
-max_n_episodes = 10
+max_n_episodes = 100
 gamma = 0.99
 
 r0 = 1.0
@@ -64,8 +84,8 @@ sess.run(init)
 #                              NextFeature: nextFeat.reshape((1,100))})
 
 all_points = []
-for x in range(-7,8):
-    for y in range(-7,8):
+for x in range(-5,6):
+    for y in range(-5,6):
         all_points.append([x,y])
         
 all_points = np.array(all_points)
@@ -80,18 +100,18 @@ while n_episodes < max_n_episodes:
     # Start with a single atom at the center
     gridlist = np.array([[0,0]])
 
-    if np.mod(n_episodes,2) == 0 and n_episodes != 0:
+    if np.mod(n_episodes,10) == 0 and n_episodes != 0:
         QtargetList = np.array(QtargetList).reshape((len(QtargetList),1))
         CurrentFeatList = np.array(CurrentFeatList)
         NewFeatList = np.array(NewFeatList)
-
+        print('Training!')
         m = 0
         while m < 100:
             sess.run(trainOp,feed_dict={CurrentFeature: CurrentFeatList,
                                         NextFeature: NewFeatList,
                                         Qnext: QtargetList})
             m += 1
-
+        print('Training done!')
         QtargetList = []
         CurrentFeatList = []
         NewFeatList = []
@@ -103,17 +123,16 @@ while n_episodes < max_n_episodes:
 
         
         # Run all possible (resonable) positions through the Qnetwork
-        s = 0
-        slist = []
-        Qlist = []
-        for candidate in all_points:
-            if candidate.tolist() not in gridlist.tolist():
-                slist.append(s)
-                candidate_gridlist = np.vstack((gridlist,np.array(candidate)))
-                candidate_feature = LJEnv.getFeature(candidate_gridlist)
-                Qlist.append(sess.run(Q,feed_dict={CurrentFeature: Currentfeat.reshape((1,100)),
-                                                   NextFeature: candidate_feature.reshape((1,100))}))
-            s += 1
+        slist,CandidateFeatBatch = get_all_points_not_in_gridlist(all_points,gridlist)
+
+        # Copy CurrentFeat once for every candidate
+        CurrentFeatBatch = CurrentFeat
+        for i in range(len(slist)-1):
+            CurrentFeatBatch = np.vstack((CurrentFeatBatch,CurrentFeat))
+
+        # Get Q values for all candidates
+        Qlist = sess.run(Q,feed_dict={CurrentFeature: CurrentFeatBatch,
+                                      NextFeature: CandidateFeatBatch})
 
         # Turn Q values into probabilities for sampling
         probs = softmax(Qlist)
@@ -126,21 +145,33 @@ while n_episodes < max_n_episodes:
 
         # Add new point to gridlist and get the new feature
         gridlist = np.vstack((gridlist,nextPoint))
-        NewFeature = LJEnv.getFeature(gridlist)
+        NewFeat = LJEnv.getFeature(gridlist)
 
         # Run all positions through Qnetwork again, but now with the new gridlist. This
-        # is used to get Qtarget. 
-        s = 0
-        slist = []
-        Qnextlist = []        
-        for candidate in all_points:
-            if candidate.tolist() not in gridlist.tolist():
-                slist.append(s)
-                candidate_gridlist = np.vstack((gridlist,np.array(candidate)))
-                candidate_feature = LJEnv.getFeature(candidate_gridlist)
-                Qnextlist.append(sess.run(Q,feed_dict={CurrentFeature: NewFeature.reshape((1,100)),
-                                                   NextFeature: candidate_feature.reshape((1,100))}))
-            s += 1
+        # is used to get Qtarget.
+
+        slist,CandidateFeatBatch = get_all_points_not_in_gridlist(all_points,gridlist)
+        # Copy CurrentFeat once for every candidate
+        NewFeatBatch = NewFeat
+        for i in range(len(slist)-1):
+            NewFeatBatch = np.vstack((NewFeatBatch,NewFeat))
+
+
+        # Get new Q list
+        NewQlist = sess.run(Q,feed_dict={CurrentFeature: NewFeatBatch,
+                                         NextFeature: CandidateFeatBatch})
+        
+        # s = 0
+        # slist = []
+        # Qnextlist = []        
+        # for candidate in all_points:
+        #     if candidate.tolist() not in gridlist.tolist():
+        #         slist.append(s)
+        #         candidate_gridlist = np.vstack((gridlist,np.array(candidate)))
+        #         candidate_feature = LJEnv.getFeature(candidate_gridlist)
+        #         Qnextlist.append(sess.run(Q,feed_dict={CurrentFeature: NewFeature.reshape((1,100)),
+        #                                            NextFeature: candidate_feature.reshape((1,100))}))
+        #     s += 1
 
         # If all atoms are placed, calculate the energy and set the negative to reward
         if n == N_atoms-1:
@@ -150,11 +181,11 @@ while n_episodes < max_n_episodes:
             r = 0
             
         # Qtarget update rule
-        Qtarget = r + gamma*np.max(Qnextlist)
+        Qtarget = r + gamma*np.max(NewQlist)
 
         # Save current and new feature and Qtarget for batch training
-        CurrentFeatList.append(Currentfeat)
-        NewFeatList.append(NewFeature)        
+        CurrentFeatList.append(CurrentFeat)
+        NewFeatList.append(NewFeat)        
         QtargetList.append(Qtarget)
 
 
