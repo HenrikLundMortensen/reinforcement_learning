@@ -15,8 +15,11 @@ def softmax(x):
     Arguments:
     - `x`:
     """
-    res = np.exp(x)
-    return res/np.sum(res)
+
+    c = max(x)
+    tmp = c + np.log(np.sum(np.exp(x-c)))
+    # res = np.exp(x)
+    return np.exp(x-tmp)# res/np.sum(res)
 
 
 def get_all_points_not_in_gridlist(all_points,gridlist):
@@ -39,8 +42,8 @@ def get_all_points_not_in_gridlist(all_points,gridlist):
 
     
 
-N_atoms = 7
-max_n_episodes = 200
+N_atoms = 15
+max_n_episodes = 400
 gamma = 0.99
 
 r0 = 1.0
@@ -108,10 +111,10 @@ while n_episodes < max_n_episodes:
         NewFeatList = np.array(NewFeatList)
         print('Training!')
         m = 0
-        while m < 0:
-            # sess.run(trainOp,feed_dict={CurrentFeature: CurrentFeatList,
-            #                             NextFeature: NewFeatList,
-            #                             Qnext: QtargetList})
+        while m < 20:
+            sess.run(trainOp,feed_dict={CurrentFeature: CurrentFeatList,
+                                        NextFeature: NewFeatList,
+                                        Qnext: QtargetList})
             m += 1
         print('Training done!')
         QtargetList = []
@@ -145,7 +148,8 @@ while n_episodes < max_n_episodes:
         Qlisttoc = time.time() - tic
 
         # Turn Q values into probabilities for sampling
-        probs = (Qlist-np.min(Qlist))/np.sum(Qlist-np.min(Qlist))
+        # probs = (Qlist-np.min(Qlist))/np.sum(Qlist-np.min(Qlist))
+        probs = softmax(Qlist)
 
         # Sample new position according to Q values. slist contains indexes of
         # all_positions that are not in gridlist, i.e. no two atoms can be on top
@@ -176,7 +180,7 @@ while n_episodes < max_n_episodes:
         # If all atoms are placed, calculate the energy and set the negative to reward
         if n == N_atoms-2:
             E =  LJEnv.getEnergy(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
-            r = -np.power(E,3)/100
+            r = -np.power(E,3)/10
             Elist.append(E)
             if E == min(Elist):
                 best_E = E
@@ -227,16 +231,13 @@ ax.set_xlim([-5,5])
 ax.set_ylim([-5,5])
 ax.plot(xylist.T[0],xylist.T[1],'bo')
 
-fig.savefig('gridPlot_random')
-
-fig = plt.figure()
-
+fig.savefig('gridPlot_3_atoms')
 
 fig = plt.figure()
 ax = fig.gca()
 ax.plot(Elist)
 ax.plot(np.array(range(max_n_episodes-21))+21,running_mean)
-fig.savefig('learning_curve_random')
+fig.savefig('learning_curve_3_atoms')
 
 
 
