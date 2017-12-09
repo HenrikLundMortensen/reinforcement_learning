@@ -10,14 +10,14 @@ def Qnetwork():
     # Qgraph = tf.Graph()
     
     # with Qgraph.as_default():
-    CurrentFeature = tf.placeholder(tf.float32,shape=[None,20])
+    CurrentFeature = tf.placeholder(tf.float32,shape=[None,40])
     layer = tf.contrib.layers.fully_connected(inputs=CurrentFeature,
                                               num_outputs = 100)
     CurrentInput = tf.contrib.layers.fully_connected(inputs=layer,
                                                      activation_fn = None,
                                                      num_outputs = 10)
 
-    NextFeature = tf.placeholder(tf.float32,shape=[None,20])
+    NextFeature = tf.placeholder(tf.float32,shape=[None,40])
     layer = tf.contrib.layers.fully_connected(inputs=NextFeature,
                                               num_outputs = 100)
     NextInput = tf.contrib.layers.fully_connected(inputs=layer,

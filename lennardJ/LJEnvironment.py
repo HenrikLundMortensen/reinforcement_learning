@@ -12,7 +12,7 @@ class LJEnvironment():
         """
         """
         self.params = params[0]
-        self.fpf = fingerprintFeature(rcut = 4,binwidth=0.2)
+        self.fpf = fingerprintFeature(rcut = 4*2,binwidth=0.2,sigma=0.2)
         
         
     def gridToXY(self,gridCoord):
@@ -27,6 +27,7 @@ class LJEnvironment():
         v1 = np.array([r0,0])
         v2 = np.array([np.cos(np.pi/3)*r0,np.sin(np.pi/3)*r0])
         xy = a1*v1 + a2*v2
+        
 
         return np.array(xy)        
 

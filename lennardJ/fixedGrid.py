@@ -4,6 +4,7 @@ import time
 from matplotlib import pyplot as plt
 from IPython import embed
 
+from plot_episode_summaries import *
 from LJEnvironment import *
 from LJNetwork import Qnetwork
 
@@ -42,8 +43,8 @@ def get_all_points_not_in_gridlist(all_points,gridlist):
 
     
 
-N_atoms = 15
-max_n_episodes = 400
+N_atoms = 10
+max_n_episodes = 160
 gamma = 0.99
 
 r0 = 1.0
@@ -88,11 +89,22 @@ sess.run(init)
 #                              NextFeature: nextFeat.reshape((1,100))})
 
 all_points = []
+# shear = np.array([[1,-1],[0,1]])
 for x in range(-5,6):
     for y in range(-5,6):
-        all_points.append([x,y+x])
+        # all_points.append(np.dot(shear,np.array([x,y])))
+        all_points.append([x,y])
+
         
 all_points = np.array(all_points)
+
+# fig = plt.figure()
+# ax = fig.gca()
+# ax.scatter(all_points.T[0],all_points.T[1])
+# ax.set_xlim([-10,10])
+# ax.set_ylim([-10,10])
+# fig.show()
+# stop
 
 n_episodes = 0
 QtargetList = []
@@ -100,18 +112,27 @@ CurrentFeatList = []
 NewFeatList = []
 Elist = []
 running_mean = []
+
+molecule_build_list = []
+feature_build_list = []
+slist_build_list = []
+probs_build_list = []
+episode_summary_list = []
+
+episode_probe = [1,21,41,61,81,101,121,141,max_n_episodes+1]
+probe_count = 0
 while n_episodes < max_n_episodes:
 
     # Start with a single atom at the center
     gridlist = np.array([[0,0]])
 
-    if np.mod(n_episodes,50) == 0 and n_episodes != 0:
+    if np.mod(n_episodes,20) == 0 and n_episodes != 0:
         QtargetList = np.array(QtargetList).reshape((len(QtargetList),1))
         CurrentFeatList = np.array(CurrentFeatList)
         NewFeatList = np.array(NewFeatList)
         print('Training!')
         m = 0
-        while m < 20:
+        while m < 5:
             sess.run(trainOp,feed_dict={CurrentFeature: CurrentFeatList,
                                         NextFeature: NewFeatList,
                                         Qnext: QtargetList})
@@ -151,6 +172,12 @@ while n_episodes < max_n_episodes:
         # probs = (Qlist-np.min(Qlist))/np.sum(Qlist-np.min(Qlist))
         probs = softmax(Qlist)
 
+        if n_episodes==episode_probe[probe_count]:
+            molecule_build_list.append(gridlist)
+            feature_build_list.append(CurrentFeat)
+            slist_build_list.append(slist)
+            probs_build_list.append(probs)
+        
         # Sample new position according to Q values. slist contains indexes of
         # all_positions that are not in gridlist, i.e. no two atoms can be on top
         # of each other
@@ -180,12 +207,15 @@ while n_episodes < max_n_episodes:
         # If all atoms are placed, calculate the energy and set the negative to reward
         if n == N_atoms-2:
             E =  LJEnv.getEnergy(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
-            r = -np.power(E,3)/10
+            r = -np.power(E,3)
             Elist.append(E)
             if E == min(Elist):
                 best_E = E
                 best_grid = gridlist
 
+            if n_episodes==episode_probe[probe_count]:
+                molecule_build_list.append(gridlist)
+                feature_build_list.append(NewFeat)
 
         else:
             r = 0
@@ -202,6 +232,21 @@ while n_episodes < max_n_episodes:
     if n_episodes > 20:
         running_mean.append(np.mean(Elist[n_episodes-20:]))
 
+    if n_episodes==episode_probe[probe_count]:
+        
+        episode_summary_list.append([molecule_build_list,
+                                     feature_build_list,
+                                     slist_build_list,
+                                     probs_build_list])
+        
+        
+        molecule_build_list = []
+        feature_build_list = []
+        slist_build_list = []
+        probs_build_list = []
+        probe_count +=1 
+        
+
     print('Episode: %i/%i \t Current energy: %4.4f \t Best energy = %4.4f' %(n_episodes,max_n_episodes,
                                                                              E,
                                                                              best_E))
@@ -212,14 +257,13 @@ while n_episodes < max_n_episodes:
         
 
         
-
+plot_episode_summaries(episode_summary_list,all_points,N_atoms,LJEnv,Elist,'test')
 
         
-
+stop
 
 xylist = np.array([LJEnv.gridToXY(grid) for grid in best_grid])
-
-
+all_points_XY = np.array([LJEnv.gridToXY(point) for point in all_points])
 
 
 
@@ -227,17 +271,66 @@ xylist = np.array([LJEnv.gridToXY(grid) for grid in best_grid])
 
 fig = plt.figure()
 ax = fig.gca()
-ax.set_xlim([-5,5])
-ax.set_ylim([-5,5])
+ax.set_xlim([-7,7])
+ax.set_ylim([-7,7])
+ax.plot(all_points_XY.T[0],all_points_XY.T[1],'go',alpha=0.5)
 ax.plot(xylist.T[0],xylist.T[1],'bo')
 
-fig.savefig('gridPlot_3_atoms')
+
+fig.savefig('gridPlot_5_atoms')
 
 fig = plt.figure()
 ax = fig.gca()
 ax.plot(Elist)
 ax.plot(np.array(range(max_n_episodes-21))+21,running_mean)
-fig.savefig('learning_curve_3_atoms')
+fig.savefig('learning_curve_5_atoms')
 
 
 
+
+fig,ax = plt.subplots(N_atoms,2,figsize = (4,4/2*N_atoms))
+
+
+# molecule_build_list = np.array(molecule_build_list)
+# feature_build_list = np.array(feature_build_list)
+# slist_build_list = np.array(slist_build_list)
+# probs_build_list = np.array(probs_build_list)
+
+
+molecule_axes = ax.T[0]
+feature_axes = ax.T[1]
+
+
+for i,axis in enumerate(molecule_axes):
+    axis.set_xlim([-8,8])
+    axis.set_ylim([-8,8])
+
+
+    if i<N_atoms-1:
+        sp = np.array([LJEnv.gridToXY(point) for point in all_points[slist_build_list[i]]])
+        # Create colors from probs list
+        c = []
+        max_p = np.max(probs_build_list[i])
+
+        
+        for p in probs_build_list[i]:
+            col = 0.8*(1-p)
+            c.append([col,col,col])
+        axis.scatter(sp.T[0],sp.T[1],c=np.array(c).reshape((len(sp),3)))
+        
+    
+    xylist = np.array([LJEnv.gridToXY(grid) for grid in molecule_build_list[i]])
+    axis.scatter(xylist.T[0],xylist.T[1])
+
+max_feat = np.max(feature_build_list)
+    
+for i,axis in enumerate(feature_axes):
+    axis.set_ylim([0,max_feat])
+    axis.plot(feature_build_list[i],'r')
+    
+
+
+
+
+fig.tight_layout()
+fig.savefig('structure_feature_%i_atoms_%i_episodes' %(N_atoms,episode_probe),dpi=400)
