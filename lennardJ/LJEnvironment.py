@@ -22,13 +22,19 @@ class LJEnvironment():
         r0 = self.params[0]
 
         a1 = gridCoord[0]
-        a2 = gridCoord[1]    
+        a2 = gridCoord[1]
 
         v1 = np.array([r0,0])
         v2 = np.array([np.cos(np.pi/3)*r0,np.sin(np.pi/3)*r0])
-        xy = a1*v1 + a2*v2
-        
 
+        xy = a1*v1 + a2*v2
+
+        if xy[0]>5:
+            xy[0] = -10 + xy[0]
+
+        if xy[0]<=-5:
+            xy[0] = 10 + xy[0]
+            
         return np.array(xy)        
 
     def getEnergy(self,XY):

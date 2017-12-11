@@ -44,7 +44,7 @@ def get_all_points_not_in_gridlist(all_points,gridlist):
     
 
 N_atoms = 10
-max_n_episodes = 160
+max_n_episodes = 100
 gamma = 0.99
 
 r0 = 1.0
@@ -90,174 +90,192 @@ sess.run(init)
 
 all_points = []
 # shear = np.array([[1,-1],[0,1]])
-for x in range(-5,6):
+for x in range(-5,5):
     for y in range(-5,6):
         # all_points.append(np.dot(shear,np.array([x,y])))
         all_points.append([x,y])
 
-        
+
+
 all_points = np.array(all_points)
+# xylist = np.array([LJEnv.gridToXY(grid) for grid in all_points])
 
 # fig = plt.figure()
 # ax = fig.gca()
-# ax.scatter(all_points.T[0],all_points.T[1])
+# ax.scatter(xylist.T[0],xylist.T[1])
 # ax.set_xlim([-10,10])
 # ax.set_ylim([-10,10])
 # fig.show()
 # stop
 
-n_episodes = 0
-QtargetList = []
-CurrentFeatList = []
-NewFeatList = []
-Elist = []
-running_mean = []
-
-molecule_build_list = []
-feature_build_list = []
-slist_build_list = []
-probs_build_list = []
-episode_summary_list = []
-
-episode_probe = [1,21,41,61,81,101,121,141,max_n_episodes+1]
-probe_count = 0
-while n_episodes < max_n_episodes:
-
-    # Start with a single atom at the center
-    gridlist = np.array([[0,0]])
-
-    if np.mod(n_episodes,20) == 0 and n_episodes != 0:
-        QtargetList = np.array(QtargetList).reshape((len(QtargetList),1))
-        CurrentFeatList = np.array(CurrentFeatList)
-        NewFeatList = np.array(NewFeatList)
-        print('Training!')
-        m = 0
-        while m < 5:
-            sess.run(trainOp,feed_dict={CurrentFeature: CurrentFeatList,
-                                        NextFeature: NewFeatList,
-                                        Qnext: QtargetList})
-            m += 1
-        print('Training done!')
-        QtargetList = []
-        CurrentFeatList = []
-        NewFeatList = []
-        
-    for n in range(N_atoms-1):
-        master_tic = time.time()
-        # Get feature for current gridlist
-        tic = time.time()
-
-        CurrentFeat = LJEnv.getFeature(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
-        feature_toc = time.time() - tic
-        
-        # Run all possible (resonable) positions through the Qnetwork
-        tic = time.time()
-        slist,CandidateFeatBatch = get_all_points_not_in_gridlist(all_points,gridlist)
-        slist_toc = time.time()-tic
-        # Copy CurrentFeat once for every candidate
-
-        tic = time.time()
-        CurrentFeatBatch = CurrentFeat
-        for i in range(len(slist)-1):
-            CurrentFeatBatch = np.vstack((CurrentFeatBatch,CurrentFeat))
-        stack_toc = time.time() - tic
-
-        # Get Q values for all candidates
-        tic = time.time()
-        Qlist = sess.run(Q,feed_dict={CurrentFeature: CurrentFeatBatch,
-                                      NextFeature: CandidateFeatBatch})
-        Qlisttoc = time.time() - tic
-
-        # Turn Q values into probabilities for sampling
-        # probs = (Qlist-np.min(Qlist))/np.sum(Qlist-np.min(Qlist))
-        probs = softmax(Qlist)
-
-        if n_episodes==episode_probe[probe_count]:
-            molecule_build_list.append(gridlist)
-            feature_build_list.append(CurrentFeat)
-            slist_build_list.append(slist)
-            probs_build_list.append(probs)
-        
-        # Sample new position according to Q values. slist contains indexes of
-        # all_positions that are not in gridlist, i.e. no two atoms can be on top
-        # of each other
-        nextPointIndex = np.random.choice(slist,p=probs.flatten())
-        nextPoint = all_points[nextPointIndex]
-
-        # Add new point to gridlist and get the new feature
-        gridlist = np.vstack((gridlist,nextPoint))
-        NewFeat = LJEnv.getFeature(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
-
-        # Run all positions through Qnetwork again, but now with the new gridlist. This
-        # is used to get Qtarget.
-
-        tic = time.time()
-        slist,CandidateFeatBatch = get_all_points_not_in_gridlist(all_points,gridlist)
-        slist_toc2 = time.time()-tic
-        # Copy CurrentFeat once for every candidate
-        NewFeatBatch = NewFeat
-        for i in range(len(slist)-1):
-            NewFeatBatch = np.vstack((NewFeatBatch,NewFeat))
+for k in range(0):
+    sess = tf.Session()
+    sess.run(init)
+    
+    n_episodes = 0
+    QtargetList = []
+    CurrentFeatList = []
+    NewFeatList = []
+    Elist = []
+    running_mean = []
 
 
-        # Get new Q list
-        NewQlist = sess.run(Q,feed_dict={CurrentFeature: NewFeatBatch,
-                                         NextFeature: CandidateFeatBatch})
-        
-        # If all atoms are placed, calculate the energy and set the negative to reward
-        if n == N_atoms-2:
-            E =  LJEnv.getEnergy(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
-            r = -np.power(E,3)
-            Elist.append(E)
-            if E == min(Elist):
-                best_E = E
-                best_grid = gridlist
+    molecule_build_list = []
+    feature_build_list = []
+    slist_build_list = []
+    probs_build_list = []
+    episode_summary_list = []
+
+    episode_probe = [1,21,41,61,81,101,121,141,max_n_episodes+1]
+    probe_count = 0
+    while n_episodes < max_n_episodes:
+
+        # Start with a single atom at the center
+        gridlist = np.array([[0,0]])
+
+        if np.mod(n_episodes,20) == 0 and n_episodes != 0:
+            QtargetList = np.array(QtargetList).reshape((len(QtargetList),1))
+            CurrentFeatList = np.array(CurrentFeatList)
+            NewFeatList = np.array(NewFeatList)
+            print('Training!')
+            m = 0
+            while m < 20:
+                sess.run(trainOp,feed_dict={CurrentFeature: CurrentFeatList,
+                                            NextFeature: NewFeatList,
+                                            Qnext: QtargetList})
+                m += 1
+            print('Training done!')
+            QtargetList = []
+            CurrentFeatList = []
+            NewFeatList = []
+
+        for n in range(N_atoms-1):
+            master_tic = time.time()
+            # Get feature for current gridlist
+            tic = time.time()
+
+            CurrentFeat = LJEnv.getFeature(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
+            feature_toc = time.time() - tic
+
+            # Run all possible (resonable) positions through the Qnetwork
+            tic = time.time()
+            slist,CandidateFeatBatch = get_all_points_not_in_gridlist(all_points,gridlist)
+            slist_toc = time.time()-tic
+            # Copy CurrentFeat once for every candidate
+
+            tic = time.time()
+            CurrentFeatBatch = CurrentFeat
+            for i in range(len(slist)-1):
+                CurrentFeatBatch = np.vstack((CurrentFeatBatch,CurrentFeat))
+            stack_toc = time.time() - tic
+
+            # Get Q values for all candidates
+            tic = time.time()
+            Qlist = sess.run(Q,feed_dict={CurrentFeature: CurrentFeatBatch,
+                                          NextFeature: CandidateFeatBatch})
+            Qlisttoc = time.time() - tic
+
+            # Turn Q values into probabilities for sampling
+            # probs = (Qlist-np.min(Qlist))/np.sum(Qlist-np.min(Qlist))
+            probs = softmax(Qlist)
 
             if n_episodes==episode_probe[probe_count]:
                 molecule_build_list.append(gridlist)
-                feature_build_list.append(NewFeat)
+                feature_build_list.append(CurrentFeat)
+                slist_build_list.append(slist)
+                probs_build_list.append(probs)
 
-        else:
-            r = 0
-            
-        # Qtarget update rule
-        Qtarget = r + gamma*np.max(NewQlist)
+            # Sample new position according to Q values. slist contains indexes of
+            # all_positions that are not in gridlist, i.e. no two atoms can be on top
+            # of each other
+            nextPointIndex = np.random.choice(slist,p=probs.flatten())
+            nextPoint = all_points[nextPointIndex]
 
-        # Save current and new feature and Qtarget for batch training
-        CurrentFeatList.append(CurrentFeat)
-        NewFeatList.append(NewFeat)        
-        QtargetList.append(Qtarget)
-        master_toc = time.time() - master_tic
+            # Add new point to gridlist and get the new feature
+            gridlist = np.vstack((gridlist,nextPoint))
+            NewFeat = LJEnv.getFeature(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
 
-    if n_episodes > 20:
-        running_mean.append(np.mean(Elist[n_episodes-20:]))
+            # Run all positions through Qnetwork again, but now with the new gridlist. This
+            # is used to get Qtarget.
 
-    if n_episodes==episode_probe[probe_count]:
-        
-        episode_summary_list.append([molecule_build_list,
-                                     feature_build_list,
-                                     slist_build_list,
-                                     probs_build_list])
-        
-        
-        molecule_build_list = []
-        feature_build_list = []
-        slist_build_list = []
-        probs_build_list = []
-        probe_count +=1 
+            tic = time.time()
+            slist,CandidateFeatBatch = get_all_points_not_in_gridlist(all_points,gridlist)
+            slist_toc2 = time.time()-tic
+            # Copy CurrentFeat once for every candidate
+            NewFeatBatch = NewFeat
+            for i in range(len(slist)-1):
+                NewFeatBatch = np.vstack((NewFeatBatch,NewFeat))
+
+
+            # Get new Q list
+            NewQlist = sess.run(Q,feed_dict={CurrentFeature: NewFeatBatch,
+                                             NextFeature: CandidateFeatBatch})
+
+            # If all atoms are placed, calculate the energy and set the negative to reward
+            if n == N_atoms-2:
+                E =  LJEnv.getEnergy(np.array([LJEnv.gridToXY(grid) for grid in gridlist]))
+                r = -np.power(E,3)/10
+                Elist.append(E)
+                if E == min(Elist):
+                    best_E = E
+                    best_grid = gridlist
+
+                if n_episodes==episode_probe[probe_count]:
+                    molecule_build_list.append(gridlist)
+                    feature_build_list.append(NewFeat)
+
+            else:
+                r = 0
+
+            # Qtarget update rule
+            Qtarget = r + gamma*np.max(NewQlist)
+
+            # Save current and new feature and Qtarget for batch training
+            CurrentFeatList.append(CurrentFeat)
+            NewFeatList.append(NewFeat)        
+            QtargetList.append(Qtarget)
+            master_toc = time.time() - master_tic
+
+        if n_episodes > 20:
+            running_mean.append(np.mean(Elist[n_episodes-20:]))
+
+        if n_episodes==episode_probe[probe_count]:
+
+            episode_summary_list.append([molecule_build_list,
+                                         feature_build_list,
+                                         slist_build_list,
+                                         probs_build_list])
+
+
+            molecule_build_list = []
+            feature_build_list = []
+            slist_build_list = []
+            probs_build_list = []
+            probe_count +=1 
+
+
+        print('Episode: %i/%i \t Current energy: %4.4f \t Best energy = %4.4f' %(n_episodes,max_n_episodes,
+                                                                                 E,
+                                                                                 best_E))
+        n_episodes+=1
+
+    if max_n_episodes > 0:
+        np.save('results/10_atoms/episode_summary_%i_atoms' %(N_atoms),arr = np.array(episode_summary_list))
+        np.save('results/10_atoms/Elist_%i_atoms_%i' %(N_atoms,k),arr = np.array(Elist))
+
         
 
-    print('Episode: %i/%i \t Current energy: %4.4f \t Best energy = %4.4f' %(n_episodes,max_n_episodes,
-                                                                             E,
-                                                                             best_E))
-    n_episodes+=1
+# stop
+Elist_list = []
+for k in range(139):
+    Elist_list.append(np.load('results/10_atoms/Elist_%i_atoms_%i.npy' %(N_atoms,k)))
 
-    
-        
-        
+
+eps_sum = np.load('results/10_atoms/episode_summary_%i_atoms.npy' %(N_atoms))
+# Elist = np.load('Elist_%i_atoms.npy' %(N_atoms))
 
         
-plot_episode_summaries(episode_summary_list,all_points,N_atoms,LJEnv,Elist,'test')
+plot_episode_summaries(eps_sum.tolist(),all_points,N_atoms,LJEnv,Elist_list,'test')
 
         
 stop

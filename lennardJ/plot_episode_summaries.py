@@ -3,7 +3,7 @@ import matplotlib.gridspec as gridspec
 from IPython import embed
 import numpy as np
 
-def plot_episode_summaries(eps_sum,all_points,N_atoms,LJEnv,Elist,name):
+def plot_episode_summaries(eps_sum,all_points,N_atoms,LJEnv,Elist_list,name):
     """
 
     """
@@ -13,14 +13,18 @@ def plot_episode_summaries(eps_sum,all_points,N_atoms,LJEnv,Elist,name):
 
     
     learn_ax = fig.add_subplot(gs[0:2,:])
-    learn_ax.set_xlim([0,len(Elist)])
-    learn_ax.plot(Elist)
+    learn_ax.set_xlim([0,len(Elist_list[0])])
+
+    learn_ax.set_xlabel('Episode')
+    learn_ax.set_ylabel('Energy')
+    learn_ax.plot(np.mean(np.array(Elist_list),axis=0),color='k',alpha=1,linewidth=4)
+    for Elist in Elist_list:
+        learn_ax.plot(Elist,color='k',alpha=0.02,linewidth=2)
     
     
     ax_list = []
     for i in range(N_atoms):
         for j in range(2*probes):
-            print(i,j)
             ax_list.append(fig.add_subplot(gs[i+2,j]))
         
     ax = np.array(ax_list)# .reshape((N_atoms*probes,2)).T
@@ -50,9 +54,9 @@ def plot_episode_summaries(eps_sum,all_points,N_atoms,LJEnv,Elist,name):
 
         # Plot molecules and probabilities
         for j,axis in enumerate(molecule_axes):
-            axis.set_xlim([-8,8])
-            axis.set_ylim([-8,8])
-
+            axis.set_xlim([-5,5])
+            axis.set_ylim([-5,5])
+            
 
             if j<N_atoms-1:
                 sp = np.array([LJEnv.gridToXY(point) for point in all_points[sb_list[j]]])
@@ -62,13 +66,11 @@ def plot_episode_summaries(eps_sum,all_points,N_atoms,LJEnv,Elist,name):
 
         
                 for p in pb_list[j]:
-                    col = 0.8*(1-p)
+                    col = 1*(1-p)
                     c.append([col,col,col])
                 axis.scatter(sp.T[0],sp.T[1],c=np.array(c).reshape((len(sp),3)))
         
-            print(i,j)
             xylist = np.array([LJEnv.gridToXY(grid) for grid in mb_list[j]])
-            print('I made it here')
             axis.scatter(xylist.T[0],xylist.T[1])
 
         max_feat = np.max(fb_list)
@@ -80,7 +82,7 @@ def plot_episode_summaries(eps_sum,all_points,N_atoms,LJEnv,Elist,name):
 
 
     fig.tight_layout()
-    fig.savefig(name,dpi=400)
+    fig.savefig(name,dpi=200)
     
 
     
